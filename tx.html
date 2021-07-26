@@ -1,0 +1,296 @@
+<html class="adaptBackground" style="transition: 0.5s ease">
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0">
+    <title id="tabtitle">sensorStream</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Round">
+</head>
+<style>
+    @import url('https://rsms.me/inter/inter.css');
+
+    body,
+    input,
+    button {
+        text-align: center;
+        font-family: inter, sans-serif;
+        color: black;
+        font-feature-settings: "ss01";
+        letter-spacing: -0.5px;
+    }
+
+    ol li {
+        text-align: left !important;
+    }
+
+    .adaptBackground {
+        background-color: white;
+    }
+
+    .invertAdaptBackground {
+        background-color: black;
+        color: white;
+    }
+
+    .circle {
+        width: 64px;
+        height: 64px;
+        border-radius: 32px;
+        margin: 4px;
+        /* animation: zoomin 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.05) backwards; */
+        animation-duration: 0.2s;
+        animation-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.05);
+        animation-fill-mode: backwards;
+    }
+
+    @keyframes dropin {
+        0% {
+            transform: translateY(-256px);
+            opacity: 0;
+        }
+    }
+
+    @keyframes zoomin {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+    }
+
+    #board {
+        border-width: 2px;
+        border-color: gray;
+        border-style: ridge;
+        border-radius: 36px;
+    }
+
+    #board td {
+        padding: 0;
+        width: 72px;
+        height: 72px;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        /* border-width: 2px;
+        border-color: gray;
+        border-style: ridge;
+        border-radius: 48px; */
+    }
+
+    .droppers>td {
+        transition: 0.12s ease;
+        width: 72px;
+        height: 72px;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        /* animation: heightBiggen 0.25s ease backwards; */
+        cursor: pointer;
+        filter: blur(16px);
+        pointer-events: none;
+    }
+
+    @keyframes heightBiggen {
+        0% {
+            height: 0;
+        }
+    }
+
+    .droppers>td:hover {
+        transform: scale(1.2);
+    }
+
+    .droppers>td:active {
+        transform: scale(1.1);
+    }
+
+    .hoverfancy {
+        transition: all 240ms cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+
+    .hoverfancy:hover {
+        transform: scale(1.14) !important;
+    }
+
+    .hoverfancy:active {
+        transform: scale(1.07) !important;
+    }
+
+    #alertMessage {
+        position: fixed;
+        top: 16px;
+        font-weight: 600;
+        font-size: 24px;
+        border-radius: 8px;
+        transition: 0.25s ease;
+        padding: 8px;
+        transform: translateY(-150%);
+        /* animation-name: alertDisappear; */
+        animation-duration: 0.25s;
+        animation-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        animation-fill-mode: forwards;
+    }
+
+    @keyframes alertAppear {
+        0% {
+            transform: translateY(-150%);
+        }
+
+        100% {
+            transform: none;
+        }
+    }
+
+    @keyframes alertDisappear {
+        0% {
+            transform: none;
+        }
+
+        100% {
+            transform: translateY(-150%);
+        }
+    }
+
+    body button {
+        margin-bottom: 8px;
+        height: 64px;
+        /* border-radius: 4px; */
+        display: inline-block;
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    body p span {
+        padding: 2px;
+        border-radius: 2px;
+    }
+
+    body>* {
+        margin-bottom: 0;
+    }
+</style>
+
+<body style="margin: 0; display: flex; align-items: center; flex-direction: column;">
+    <h1>Information</h1>
+    <p style="font-size: 20px;">Connected: <span id="connected">False</span><br>
+        Pan On: <span id="panOn">False</span><br>
+        Tilt On: <span id="tiltOn">False</span>
+    </p>
+    <h1>Action</h1>
+    <p>
+
+        <button style="height: 32px;" onclick="requestDeviceOrientation()">Initiate</button>
+    </p>
+    <p>
+        <button onclick="send({type:'togglePan'})">Toggle Pan</button>
+        <button onclick="send({type:'toggleTilt'})">Toggle Tilt</button>
+        <br>
+        <button onclick="send({type:'allOn'})">Both On</button>
+        <button onclick="send({type:'allOff'})">Both Off</button>
+    </p>
+    <h1>Data</h1>
+    <p id="onscreenData">this would be a message</p>
+    <h1>Log</h1>
+    <p id="onscreenLog">this would be a message</p>
+</body>
+<script>
+    // Create WebSocket connection.
+    var socket;
+    var loc = window.location, new_uri;
+    if (loc.protocol === "https:") {
+        new_uri = "wss:";
+    } else {
+        new_uri = "ws:";
+    }
+    new_uri += "//" + loc.host;
+    new_uri += loc.pathname + "transport";
+    socket = new WebSocket(new_uri)
+    var absolute;
+    var alpha;
+    var beta;
+    var gamma;
+    function handleOrientation(event) {
+        console.log('literally anythinhg')
+        absolute = event.absolute;
+        alpha = event.alpha;
+        beta = event.beta;
+        gamma = event.gamma;
+        socket.send(JSON.stringify({
+            'type': 'orientationUpdate',
+            'alpha': alpha,
+            'beta': beta,
+            'gamma': gamma
+        }))
+    }
+
+    function requestDeviceOrientation() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // handle regular non iOS 13+ devices
+            osl("not iOS");
+            osl(window.addEventListener('deviceorientation', handleOrientation));
+        }
+    }
+    // Connection opened
+    socket.addEventListener('open', function (event) {
+        osl('ws: connected')
+        document.querySelector("#connected").innerText = "True"
+        // loopSendForever()
+        if (alpha != null) {
+            // loopSendForever()
+        } else {
+            osl('Null error')
+        }
+    });
+
+    // Connection closed
+    socket.addEventListener('close', function (event) {
+        osl('ws: connection error')
+        document.querySelector("#connected").innerText = "False"
+    });
+
+    // Listen for messages
+    socket.addEventListener('message', function (event) {
+        var message = JSON.parse(event.data)
+        if (message.type == "orientationUpdate") {
+            osd(`Pan: ${message.pan}<br>Tilt: ${message.tilt}`);
+            // osd(absolute + ' ' + alpha + ' ' + beta + ' ' + gamma);
+        }
+        if (message.type == "activeUpdate") {
+            document.querySelector("#panOn").innerText = message.pan;
+            document.querySelector("#panOn").style.backgroundColor = message.pan ? "lightgreen" : "pink";
+            document.querySelector("#tiltOn").innerText = message.tilt;
+            document.querySelector("#tiltOn").style.backgroundColor = message.tilt ? "lightgreen" : "pink";
+        }
+
+    });
+    var onscreenData = document.getElementById('onscreenData')
+
+    function osd(message) {
+        onscreenData.innerHTML = message
+    }
+    var onscreenLog = document.getElementById('onscreenLog')
+
+    function osl(message) {
+        onscreenLog.innerHTML += '<br>' + message
+    }
+
+    function loopSendForever() {
+        while (true) {
+            socket.send(JSON.stringify({
+                'alpha': alpha,
+                'beta': beta,
+                'gamma': gamma
+            }))
+        }
+    }
+    function send(data) {
+        socket.send(JSON.stringify(data))
+    }
+</script>
+
+</html>
