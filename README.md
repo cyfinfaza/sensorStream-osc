@@ -1,4 +1,4 @@
-# sensorstrem-osc
+# sensorstream-osc
 A websocket server and TCP OSC client for streaming pan and tilt data to an ETC Eos lighting console. Easily control the pan and tilt of moving lights with your phone. Great if you are using Nomad, and you're stuck with a mouse/trackpad for ML controls. 
 ## Requirements
 - LAN network with all devices connected to it (for example, start a hotspot on a phone or Windows device). You will need the IP address of some or all devices.
